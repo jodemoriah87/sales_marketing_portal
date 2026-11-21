@@ -134,9 +134,17 @@ function renderQ(){ const [n,p]=$("qi").value.split("|"),q=+$("qq").value||0,d=+
  <footer><b>Tiffany Diamond Hotels Limited</b> – The Top and Best in Tanzania<br>Valid for 14 days · Terms apply</footer><div class="stripe"></div>` }
 
 const C=window.APP_CONFIG||{};
-const client=new Appwrite.Client().setEndpoint(C.endpoint).setProject(C.projectId);
-const account=new Appwrite.Account(client), db=new Appwrite.Databases(client), ID=Appwrite.ID, Query=Appwrite.Query;
+let account,db,ID,Query,initError=null;
+try{
+ if(!window.APP_CONFIG)throw new Error("config.js did not load or has a typo (check quotes and commas)");
+ if(!window.Appwrite)throw new Error("Appwrite SDK did not load (check internet)");
+ if(!/^https:\/\//.test(C.endpoint||""))throw new Error("endpoint in config.js must start with https://");
+ if(!C.projectId||C.projectId.startsWith("PASTE"))throw new Error("projectId in config.js is not set");
+ const client=new Appwrite.Client().setEndpoint(C.endpoint).setProject(C.projectId);
+ account=new Appwrite.Account(client);db=new Appwrite.Databases(client);ID=Appwrite.ID;Query=Appwrite.Query;
+}catch(err){initError=err.message}
 async function loadLeads(){
+ if(initError)return;
  try{const r=await db.listDocuments(C.databaseId,C.leadsCollectionId,[Query.orderDesc("$createdAt"),Query.limit(100)]);leads=r.documents}
  catch(err){toast("Could not load leads: "+err.message)}
  const open=leads.filter(l=>!["Won","Lost"].includes(l.status)),won=leads.filter(l=>l.status==="Won"),lost=leads.filter(l=>l.status==="Lost");
@@ -147,11 +155,11 @@ async function addLead(e){e.preventDefault();const f=e.target,d={};
  for(const [k,v] of new FormData(f)){if(v!=="")d[k]=k==="value"?parseInt(v,10):v}
  try{await db.createDocument(C.databaseId,C.leadsCollectionId,ID.unique(),d);f.reset();toast("Lead saved");show("Leads")}
  catch(err){toast("Save failed: "+err.message)}return false}
-async function signIn(e){e.preventDefault();const em=$("em").value,pw=e.target.querySelector("input[type=password]").value;
+async function signIn(e){e.preventDefault();if(initError){toast("Setup problem: "+initError);return false}const em=$("em").value,pw=e.target.querySelector("input[type=password]").value;
  try{await account.createEmailPasswordSession(em,pw);enter(await account.get())}
  catch(err){toast("Login failed: "+err.message)}return false}
 function enter(u){$("login").classList.add("hide");$("app").classList.remove("hide");$("who").textContent=u.name||u.email;show("Dashboard")}
 async function signOut(){try{await account.deleteSession("current")}catch(e){}$("app").classList.add("hide");$("login").classList.remove("hide")}
-async function boot(){if(!C.projectId){toast("Set your Appwrite IDs in config.js");return}try{enter(await account.get())}catch(e){}}
+async function boot(){if(initError){toast("Setup problem: "+initError);return}try{enter(await account.get())}catch(e){}}
 nav();boot();
 </script></body></html>
