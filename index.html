@@ -59,7 +59,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);
 <label>Email<input type="email" id="em" required placeholder="you@tiffanydiamondhotels.com"></label>
 <label>Password<input type="password" required placeholder="••••••••"></label>
 <button class="btn">Sign In</button></form>
-<p style="font-size:12px;color:var(--muted)">Protected by role-based access &amp; audit trail · v7</p>
+<p style="font-size:12px;color:var(--muted)">Protected by role-based access &amp; audit trail · v8</p>
 </div></section>
 
 <!-- APP -->
@@ -132,15 +132,22 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);
 <label class="full">Notes<textarea name="notes" rows="3"></textarea></label>
 <div class="full"><button class="btn">Save Opportunity</button> <button type="button" class="btn alt" onclick="show('Opportunities')">Cancel</button></div></form></div></section>
 
-<section id="v-Quotes" class="hide"><div class="card noprint"><h3>Create Quote</h3>
-<form oninput="renderQ()">
-<label>Customer<input id="qc" list="cl" placeholder="Type or pick a customer"><datalist id="cl"></datalist></label>
-<label>Item<select id="qi"><option value="Deluxe Room (per night)|120000">Deluxe Room (per night) – 120,000</option><option value="Conference Hall (per day)|900000">Conference Hall (per day) – 900,000</option><option value="Banquet Package (per guest)|45000">Banquet Package (per guest) – 45,000</option></select></label>
-<label>Quantity<input id="qq" type="number" min="1" value="5"></label>
+<section id="v-Quotes" class="hide"><div class="card"><div class="top" style="margin:0 0 8px"><h3 style="margin:0">Quotations</h3><button class="btn" onclick="newQuote()">+ New Quote</button></div>
+<div class="wrap"><table id="qt"></table></div></div></section>
+
+<section id="v-QuoteEditor" class="hide">
+<div class="card noprint"><h3 id="qhead">New Quote</h3>
+<form onsubmit="return saveQuote(event)" oninput="renderQ()">
+<label>Customer<input id="qc" list="cl" required placeholder="Type or pick a customer"></label>
+<label>Valid Until<input id="qv" type="date"></label>
+<label>Status<select id="qs"><option>Draft</option><option>Sent</option><option>Accepted</option><option>Rejected</option></select></label>
 <label>Discount %<input id="qd" type="number" min="0" max="100" value="0"></label>
-<div class="full"><button type="button" class="btn" onclick="window.print()">Print / Save PDF</button></div></form></div>
+<div class="full"><b>Items</b><div class="wrap"><table id="qlines"></table></div><button type="button" class="btn alt" style="margin-top:8px" onclick="addLine()">+ Add line</button></div>
+<label class="full">Terms<textarea id="qtm" rows="2"></textarea></label>
+<div class="full"><button class="btn">Save Quote</button> <button type="button" class="btn alt" onclick="window.print()">Print / Save PDF</button> <button type="button" class="btn alt" onclick="show('Quotes')">Back</button></div></form></div>
 <div class="doc" id="qdoc"></div></section>
 </main></div>
+<datalist id="cl"></datalist><datalist id="pl"><option value="Deluxe Room (per night)"><option value="Conference Hall (per day)"><option value="Banquet Package (per guest)"><option value="Live Band Night booking"></datalist>
 <div class="toast hide" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/appwrite@16.0.2"></script>
@@ -157,21 +164,14 @@ const pages=["Dashboard","Leads","Customers","Opportunities","Quotes"];
 let leads=[];
 const $=id=>document.getElementById(id);
 function nav(){ $("nav").innerHTML=pages.map(p=>`<button data-p="${p}" onclick="show('${p}')">${p}</button>`).join("") }
-function show(p){ ["Dashboard","Leads","NewLead","Customers","NewCustomer","Opportunities","NewOpportunity","Quotes"].forEach(x=>$("v-"+x).classList.toggle("hide",x!==p));
- const TT={NewLead:"New Lead",NewCustomer:"New Customer",NewOpportunity:"New Opportunity"},AA={NewLead:"Leads",NewCustomer:"Customers",NewOpportunity:"Opportunities"};$("title").textContent=TT[p]||p; const act=AA[p]||p;
+function show(p){ ["Dashboard","Leads","NewLead","Customers","NewCustomer","Opportunities","NewOpportunity","Quotes","QuoteEditor"].forEach(x=>$("v-"+x).classList.toggle("hide",x!==p));
+ const TT={NewLead:"New Lead",NewCustomer:"New Customer",NewOpportunity:"New Opportunity",QuoteEditor:"Quote"},AA={NewLead:"Leads",NewCustomer:"Customers",NewOpportunity:"Opportunities",QuoteEditor:"Quotes"};$("title").textContent=TT[p]||p; const act=AA[p]||p;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.p===act));
- if(p==="Leads")drawLeads(); if(p==="Dashboard"||p==="Leads")loadLeads(); if(p==="Customers"||p==="Quotes"||p==="NewOpportunity")loadCustomers(); if(p==="Opportunities")loadOpps(); if(p==="Quotes")renderQ(); $("lc").textContent=leads.filter(l=>!["Won","Lost"].includes(l.status)).length }
+ if(p==="Leads")drawLeads(); if(p==="Dashboard"||p==="Leads")loadLeads(); if(p==="Customers"||p==="NewOpportunity")loadCustomers(); if(p==="Opportunities")loadOpps(); if(p==="Quotes")loadQuotes(); if(p==="QuoteEditor")loadCustomers(); $("lc").textContent=leads.filter(l=>!["Won","Lost"].includes(l.status)).length }
 function drawLeads(){ $("lt").innerHTML='<tr><th>Company</th><th>Contact</th><th>Source</th><th>Value (TZS)</th><th>Status</th><th></th></tr>'+
  leads.map(l=>`<tr><td>${esc(l.company)}</td><td>${esc(l.contact)}</td><td>${esc(l.source||"")}</td><td>${Number(l.value||0).toLocaleString()}</td><td><span class="tag ${(l.status||"New").split(" ")[0]}">${esc(l.status||"New")}</span></td><td>${l.status==="Won"?"":`<button class="btn alt" style="padding:4px 10px" onclick="convertLead('${l.$id}')">Convert</button>`}</td></tr>`).join("") }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function toast(m){const t=$("toast");t.textContent=m;t.classList.remove("hide");setTimeout(()=>t.classList.add("hide"),2200)}
-function renderQ(){ const [n,p]=$("qi").value.split("|"),q=+$("qq").value||0,d=+$("qd").value||0;
- const sub=p*q,disc=sub*d/100,net=sub-disc,vat=net*.18,tot=net+vat,f=x=>Math.round(x).toLocaleString();
- $("qdoc").innerHTML=`<header><img src="${LOGO}" alt="Tiffany Diamond Hotels Limited"><div style="text-align:right"><h2>Quotation</h2><small>Date: ${new Date().toLocaleDateString("en-GB")}</small></div></header>
- <p><b>Prepared for:</b> ${esc($("qc").value)}</p>
- <table><tr><th>Description</th><th>Qty</th><th>Unit (TZS)</th><th>Amount (TZS)</th></tr><tr><td>${n}</td><td>${q}</td><td>${f(p)}</td><td>${f(sub)}</td></tr></table>
- <p style="text-align:right">Discount (${d}%): −${f(disc)}<br>VAT 18%: ${f(vat)}<br><b style="font-size:18px;color:#E05206">Total: TZS ${f(tot)}</b></p>
- <footer><b>Tiffany Diamond Hotels Limited</b> – The Top and Best in Tanzania<br>Valid for 14 days · Terms apply</footer><div class="stripe"></div>` }
 
 const C=window.APP_CONFIG||{};
 let account,db,ID,Query,initError=null;
@@ -238,6 +238,42 @@ function dropOpp(e,st){e.preventDefault();moveOpp(e.dataTransfer.getData("text/p
 async function addOpp(e){e.preventDefault();const f=e.target,d={};
  for(const [k,v] of new FormData(f)){if(v!=="")d[k]=(k==="value"||k==="probability")?parseInt(v,10):v}
  try{await db.createDocument(C.databaseId,OT(),ID.unique(),d);f.reset();toast("Opportunity saved");show("Opportunities")}
+ catch(err){toast("Save failed: "+err.message)}return false}
+let quotes=[],qLines=[],curQ=null;
+const QT_=()=>C.quotesCollectionId||"quotes";
+const DEFTERMS="Valid until the date shown. Prices in TZS. VAT 18% is added to the net amount.";
+async function loadQuotes(){
+ if(initError)return;
+ try{const r=await db.listDocuments(C.databaseId,QT_(),[Query.orderDesc("$createdAt"),Query.limit(200)]);quotes=r.documents}
+ catch(err){toast("Could not load quotes: "+err.message)}
+ drawQuotes()}
+function drawQuotes(){$("qt").innerHTML='<tr><th>Quote No.</th><th>Customer</th><th>Total (TZS)</th><th>Status</th><th>Valid Until</th><th></th></tr>'+
+ quotes.map(q=>`<tr><td><b>${esc(q.quoteNo)}</b></td><td>${esc(q.customer)}</td><td>${Number(q.total||0).toLocaleString()}</td><td><span class="tag ${q.status==="Accepted"?"Won":q.status==="Draft"?"New":""}">${esc(q.status||"Draft")}</span></td><td>${esc(q.validUntil||"")}</td><td><button class="btn alt" style="padding:4px 10px" onclick="openQuote('${q.$id}')">Open</button></td></tr>`).join("")}
+function drawLines(){$("qlines").innerHTML='<tr><th>Description</th><th>Qty</th><th>Unit Price (TZS)</th><th></th></tr>'+
+ qLines.map((l,i)=>`<tr><td><input value="${esc(l.desc)}" list="pl" oninput="qLines[${i}].desc=this.value" style="width:100%;min-width:180px"></td><td><input type="number" min="1" value="${l.qty}" oninput="qLines[${i}].qty=+this.value" style="width:80px"></td><td><input type="number" min="0" value="${l.price}" oninput="qLines[${i}].price=+this.value" style="width:140px"></td><td><button type="button" class="btn alt" style="padding:4px 10px" onclick="rmLine(${i})">✕</button></td></tr>`).join("")}
+function addLine(){qLines.push({desc:"",qty:1,price:0});drawLines();renderQ()}
+function rmLine(i){qLines.splice(i,1);if(!qLines.length)qLines.push({desc:"",qty:1,price:0});drawLines();renderQ()}
+function newQuote(){curQ=null;qLines=[{desc:"",qty:1,price:0}];$("qc").value="";$("qv").value="";$("qs").value="Draft";$("qd").value=0;$("qtm").value=DEFTERMS;$("qhead").textContent="New Quote";drawLines();show("QuoteEditor");renderQ()}
+function openQuote(id){const q=quotes.find(x=>x.$id===id);if(!q)return;curQ=q;let it=[];try{it=JSON.parse(q.items||"[]")}catch(e){}
+ qLines=it.length?it:[{desc:"",qty:1,price:0}];$("qc").value=q.customer||"";$("qv").value=q.validUntil||"";$("qs").value=q.status||"Draft";$("qd").value=q.discountPct||0;$("qtm").value=q.terms||DEFTERMS;
+ $("qhead").textContent="Quote "+q.quoteNo;drawLines();show("QuoteEditor");renderQ()}
+function calc(){const sub=qLines.reduce((t,l)=>t+(Number(l.qty)||0)*(Number(l.price)||0),0),d=+$("qd").value||0,disc=sub*d/100,net=sub-disc,vat=net*.18;return{sub,d,disc,net,vat,tot:net+vat}}
+function renderQ(){const c=calc(),f=x=>Math.round(x).toLocaleString(),no=curQ?curQ.quoteNo:"Draft (unsaved)";
+ const rows=qLines.filter(l=>l.desc).map(l=>`<tr><td>${esc(l.desc)}</td><td>${Number(l.qty)||0}</td><td>${f(Number(l.price)||0)}</td><td>${f((Number(l.qty)||0)*(Number(l.price)||0))}</td></tr>`).join("");
+ $("qdoc").innerHTML=`<header><img src="${LOGO}" alt="Tiffany Diamond Hotels Limited"><div style="text-align:right"><h2>Quotation</h2><b>${esc(no)}</b><br><small>Date: ${new Date().toLocaleDateString("en-GB")}${$("qv").value?" · Valid until: "+esc($("qv").value):""}</small></div></header>
+ <p><b>Prepared for:</b> ${esc($("qc").value)}</p>
+ <table><tr><th>Description</th><th>Qty</th><th>Unit (TZS)</th><th>Amount (TZS)</th></tr>${rows||'<tr><td colspan="4" style="color:#999">Add items above</td></tr>'}</table>
+ <p style="text-align:right">Subtotal: ${f(c.sub)}<br>Discount (${c.d}%): −${f(c.disc)}<br>VAT 18%: ${f(c.vat)}<br><b style="font-size:18px;color:#E05206">Total: TZS ${f(c.tot)}</b></p>
+ <p style="font-size:12px;color:#6b6259">${esc($("qtm").value)}</p>
+ <footer><b>Tiffany Diamond Hotels Limited</b> – The Top and Best in Tanzania</footer><div class="stripe"></div>`}
+async function saveQuote(e){e.preventDefault();if(initError)return false;const c=calc(),items=qLines.filter(l=>l.desc);
+ if(!items.length){toast("Add at least one item");return false}
+ const d={customer:$("qc").value,items:JSON.stringify(items),subtotal:Math.round(c.sub),discountPct:Math.round(c.d),total:Math.round(c.tot),status:$("qs").value,terms:$("qtm").value};
+ if($("qv").value)d.validUntil=$("qv").value;
+ try{
+  if(curQ){await db.updateDocument(C.databaseId,QT_(),curQ.$id,d);toast("Quote updated")}
+  else{const n=quotes.reduce((m,q)=>Math.max(m,parseInt(String(q.quoteNo).replace(/\D/g,""),10)||0),0)+1;d.quoteNo="QT-"+String(n).padStart(4,"0");curQ=await db.createDocument(C.databaseId,QT_(),ID.unique(),d);toast("Saved "+d.quoteNo)}
+  const id=curQ.$id;await loadQuotes();curQ=quotes.find(x=>x.$id===id)||curQ;$("qhead").textContent="Quote "+curQ.quoteNo;renderQ()}
  catch(err){toast("Save failed: "+err.message)}return false}
 nav();boot();
 </script></body></html>
