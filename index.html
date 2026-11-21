@@ -156,7 +156,7 @@ async function addLead(e){e.preventDefault();const f=e.target,d={};
  try{await db.createDocument(C.databaseId,C.leadsCollectionId,ID.unique(),d);f.reset();toast("Lead saved");show("Leads")}
  catch(err){toast("Save failed: "+err.message)}return false}
 async function signIn(e){e.preventDefault();if(initError){toast("Setup problem: "+initError);return false}const em=$("em").value,pw=e.target.querySelector("input[type=password]").value;
- try{await account.createEmailPasswordSession(em,pw);enter(await account.get())}
+ try{try{await account.deleteSession("current")}catch(_){}await account.createEmailPasswordSession(em,pw);enter(await account.get())}
  catch(err){toast("Login failed: "+err.message)}return false}
 function enter(u){$("login").classList.add("hide");$("app").classList.remove("hide");$("who").textContent=u.name||u.email;show("Dashboard")}
 async function signOut(){try{await account.deleteSession("current")}catch(e){}$("app").classList.add("hide");$("login").classList.remove("hide")}
