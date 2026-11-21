@@ -45,7 +45,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);
 .col h4{margin:0;font-size:13px}.col .sum{font-size:12px;color:var(--muted);margin-bottom:8px}
 .opp{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;cursor:grab;font-size:13px}
 .opp select{width:100%;margin-top:6px;padding:4px;font-size:12px}
-.mbar{display:none}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:14px}.bars{display:flex;align-items:flex-end;gap:10px;height:190px;padding-top:8px}.bars div.c{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;font-size:11px;color:var(--muted)}.bars i{display:block;width:100%;max-width:46px;background:linear-gradient(var(--orange),var(--gold));border-radius:6px 6px 0 0;min-height:2px}.mbar{display:none}
 @media(max-width:760px){.app{grid-template-columns:1fr}aside{flex-direction:row;overflow-x:auto;align-items:center;border-right:0;border-bottom:1px solid var(--line)}aside img{width:90px;margin:0}nav{display:flex}nav button{white-space:nowrap;border-left:0;border-bottom:3px solid transparent}nav button.on{border-bottom-color:var(--orange)}main{padding:14px}}
 @media print{aside,.top,.noprint,.stripe.pg{display:none!important}.app{display:block}main{padding:0}.doc{border:0}}
 </style></head><body>
@@ -59,7 +59,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);
 <label>Email<input type="email" id="em" required placeholder="you@tiffanydiamondhotels.com"></label>
 <label>Password<input type="password" required placeholder="••••••••"></label>
 <button class="btn">Sign In</button></form>
-<p style="font-size:12px;color:var(--muted)">Protected by role-based access &amp; audit trail · v11</p>
+<p style="font-size:12px;color:var(--muted)">Protected by role-based access &amp; audit trail · v12</p>
 </div></section>
 
 <!-- APP -->
@@ -72,11 +72,20 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);
 
 <section id="v-Dashboard">
 <div class="kpis">
-<div class="card kpi"><b id="pv">TZS 0</b><span>Open Pipeline Value</span></div>
-<div class="card g kpi"><b id="wv">TZS 0</b><span>Won Value</span></div>
-<div class="card y kpi"><b id="wr">0%</b><span>Win Rate</span></div>
-<div class="card kpi"><b id="lc">0</b><span>Open Leads</span></div></div>
-<div class="card"><h3>Follow-ups</h3><p style="color:var(--muted)">Tasks and follow-ups will appear here once that module is added.</p></div>
+<div class="card g kpi"><b id="kRev">TZS 0</b><span>Revenue Collected</span></div>
+<div class="card y kpi"><b id="kOut">TZS 0</b><span>Outstanding Balance</span></div>
+<div class="card kpi"><b id="kOver">0</b><span id="kOverS">Overdue Invoices</span></div>
+<div class="card g kpi"><b id="kMonth">TZS 0</b><span>Collected This Month</span></div>
+<div class="card kpi"><b id="kPipe">TZS 0</b><span>Open Pipeline</span></div>
+<div class="card y kpi"><b id="kWtd">TZS 0</b><span>Weighted Forecast</span></div>
+<div class="card kpi"><b id="kQ">-</b><span>Quote Acceptance Rate</span></div>
+<div class="card g kpi"><b id="lc">0</b><span>Open Leads</span></div></div>
+<div class="g2">
+<div class="card"><h3>Collections – Last 6 Months</h3><div class="bars" id="dChart"></div></div>
+<div class="card y"><h3>Overdue Invoices</h3><div class="wrap"><table id="dOver"></table></div></div></div>
+<div class="g2">
+<div class="card g"><h3>Next Actions</h3><div class="wrap"><table id="dNext"></table></div></div>
+<div class="card"><h3>Recent Payments</h3><div class="wrap"><table id="dPay"></table></div></div></div>
 </section>
 
 <section id="v-Leads" class="hide">
@@ -201,7 +210,7 @@ function nav(){ $("nav").innerHTML=pages.map(p=>`<button data-p="${p}" onclick="
 function show(p){ ["Dashboard","Leads","NewLead","Customers","NewCustomer","Opportunities","NewOpportunity","Quotes","QuoteEditor","Orders","OrderEditor","Invoices","InvoiceEditor"].forEach(x=>$("v-"+x).classList.toggle("hide",x!==p));
  const TT={NewLead:"New Lead",NewCustomer:"New Customer",NewOpportunity:"New Opportunity",QuoteEditor:"Quote",OrderEditor:"Order",InvoiceEditor:"Invoice"},AA={NewLead:"Leads",NewCustomer:"Customers",NewOpportunity:"Opportunities",QuoteEditor:"Quotes",OrderEditor:"Orders",InvoiceEditor:"Invoices"};$("title").textContent=TT[p]||p; const act=AA[p]||p;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.p===act));
- if(p==="Leads")drawLeads(); if(p==="Dashboard"||p==="Leads")loadLeads(); if(p==="Customers"||p==="NewOpportunity")loadCustomers(); if(p==="Opportunities")loadOpps(); if(p==="Quotes")loadQuotes(); if(p==="QuoteEditor")loadCustomers(); if(p==="Orders")loadOrders(); if(p==="Invoices")loadInvoices(); $("lc").textContent=leads.filter(l=>!["Won","Lost"].includes(l.status)).length }
+ if(p==="Leads")drawLeads(); if(p==="Leads")loadLeads(); if(p==="Dashboard")loadDash(); if(p==="Customers"||p==="NewOpportunity")loadCustomers(); if(p==="Opportunities")loadOpps(); if(p==="Quotes")loadQuotes(); if(p==="QuoteEditor")loadCustomers(); if(p==="Orders")loadOrders(); if(p==="Invoices")loadInvoices(); $("lc").textContent=leads.filter(l=>!["Won","Lost"].includes(l.status)).length }
 function drawLeads(){ $("lt").innerHTML='<tr><th>Company</th><th>Contact</th><th>Source</th><th>Value (TZS)</th><th>Status</th><th></th></tr>'+
  leads.map(l=>`<tr><td>${esc(l.company)}</td><td>${esc(l.contact)}</td><td>${esc(l.source||"")}</td><td>${Number(l.value||0).toLocaleString()}</td><td><span class="tag ${(l.status||"New").split(" ")[0]}">${esc(l.status||"New")}</span></td><td>${l.status==="Won"?"":`<button class="btn alt" style="padding:4px 10px" onclick="convertLead('${l.$id}')">Convert</button>`}</td></tr>`).join("") }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
@@ -221,10 +230,7 @@ async function loadLeads(){
  if(initError)return;
  try{const r=await db.listDocuments(C.databaseId,C.leadsCollectionId,[Query.orderDesc("$createdAt"),Query.limit(100)]);leads=r.documents}
  catch(err){toast("Could not load leads: "+err.message)}
- const open=leads.filter(l=>!["Won","Lost"].includes(l.status)),won=leads.filter(l=>l.status==="Won"),lost=leads.filter(l=>l.status==="Lost");
- const sum=a=>a.reduce((t,l)=>t+(Number(l.value)||0),0);
- $("lc").textContent=open.length;$("pv").textContent="TZS "+sum(open).toLocaleString();$("wv").textContent="TZS "+sum(won).toLocaleString();
- $("wr").textContent=(won.length+lost.length?Math.round(100*won.length/(won.length+lost.length)):0)+"%";drawLeads()}
+drawLeads()}
 async function addLead(e){e.preventDefault();const f=e.target,d={};
  for(const [k,v] of new FormData(f)){if(v!=="")d[k]=k==="value"?parseInt(v,10):v}
  try{await db.createDocument(C.databaseId,C.leadsCollectionId,ID.unique(),d);f.reset();toast("Lead saved");show("Leads")}
@@ -398,5 +404,27 @@ async function createInvoice(oid){const o=orders.find(x=>x.$id===oid);if(!o||ini
   const inv=await db.createDocument(C.databaseId,IN_(),ID.unique(),d);
   toast("Created "+d.invoiceNo);await loadInvoices();openInvoice(inv.$id)}
  catch(err){toast("Create invoice failed: "+err.message)}}
+async function loadDash(){
+ if(initError)return;
+ const L=id=>db.listDocuments(C.databaseId,id,[Query.orderDesc("$createdAt"),Query.limit(500)]).then(r=>r.documents).catch(()=>null);
+ const [ld,op,qu,iv,py]=await Promise.all([L(C.leadsCollectionId),L(OT()),L(QT_()),L(IN_()),L(PY_())]);
+ if(ld)leads=ld;if(op)opps=op;if(qu)quotes=qu;if(iv)invoices=iv;if(py)payments=py;
+ renderDash()}
+function renderDash(){
+ const f=x=>Math.round(x).toLocaleString(),T=x=>"TZS "+f(x),sum=(a,fn)=>a.reduce((t,x)=>t+(Number(fn(x))||0),0);
+ const openOpps=opps.filter(o=>!/^Closed/.test(o.stage||"")),openLeads=leads.filter(l=>!["Won","Lost"].includes(l.status));
+ const rev=sum(payments,p=>p.amount),mk=today().slice(0,7),month=sum(payments.filter(p=>String(p.paidOn||"").slice(0,7)===mk),p=>p.amount);
+ const unpaid=invoices.filter(i=>bal(i)>0),over=unpaid.filter(i=>invStatus(i)==="Overdue");
+ const acc=quotes.filter(q=>q.status==="Accepted"||q.status==="Converted to Order").length,dec=acc+quotes.filter(q=>q.status==="Rejected").length;
+ $("kRev").textContent=T(rev);$("kOut").textContent=T(sum(unpaid,bal));$("kOver").textContent=over.length;$("kOverS").textContent="Overdue Invoices ("+T(sum(over,bal))+")";
+ $("kMonth").textContent=T(month);$("kPipe").textContent=T(sum(openOpps,o=>o.value));$("kWtd").textContent=T(sum(openOpps,o=>(Number(o.value)||0)*(Number(o.probability)||0)/100));
+ $("kQ").textContent=dec?Math.round(100*acc/dec)+"%":"-";$("lc").textContent=openLeads.length;
+ const months=[];for(let n=5;n>=0;n--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-n);months.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"))}
+ const vals=months.map(m=>sum(payments.filter(p=>String(p.paidOn||"").slice(0,7)===m),p=>p.amount)),mx=Math.max(...vals,1);
+ $("dChart").innerHTML=months.map((m,i)=>`<div class="c"><span>${vals[i]?(vals[i]/1e6).toFixed(1)+"M":""}</span><i style="height:${Math.round(vals[i]/mx*140)}px"></i><span>${m.slice(5)}/${m.slice(2,4)}</span></div>`).join("");
+ $("dOver").innerHTML=over.length?'<tr><th>Invoice</th><th>Customer</th><th>Due</th><th>Balance</th></tr>'+over.sort((a,b)=>String(a.dueDate).localeCompare(String(b.dueDate))).slice(0,6).map(i=>`<tr><td><b>${esc(i.invoiceNo)}</b></td><td>${esc(i.customer)}</td><td>${esc(i.dueDate||"")}</td><td>${f(bal(i))}</td></tr>`).join(""):'<tr><td style="color:var(--muted)">No overdue invoices.</td></tr>';
+ const nx=openOpps.filter(o=>o.nextAction).sort((a,b)=>String(a.expectedClose||"9999").localeCompare(String(b.expectedClose||"9999"))).slice(0,6);
+ $("dNext").innerHTML=nx.length?'<tr><th>Opportunity</th><th>Next Action</th><th>Close By</th></tr>'+nx.map(o=>`<tr><td><b>${esc(o.name)}</b><br><small>${esc(o.customer||"")}</small></td><td>${esc(o.nextAction)}</td><td>${esc(o.expectedClose||"")}</td></tr>`).join(""):'<tr><td style="color:var(--muted)">Add a Next Action on an opportunity to see it here.</td></tr>';
+ $("dPay").innerHTML=payments.length?'<tr><th>Date</th><th>Invoice</th><th>Method</th><th>Amount</th></tr>'+payments.slice(0,6).map(p=>`<tr><td>${esc(p.paidOn||"")}</td><td>${esc(p.invoiceNo)}</td><td>${esc(p.method||"")}</td><td>${f(Number(p.amount)||0)}</td></tr>`).join(""):'<tr><td style="color:var(--muted)">No payments yet.</td></tr>'}
 nav();boot();
 </script></body></html>
