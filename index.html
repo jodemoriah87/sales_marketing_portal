@@ -54,7 +54,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);
 <label>Email<input type="email" id="em" required placeholder="you@tiffanydiamondhotels.com"></label>
 <label>Password<input type="password" required placeholder="••••••••"></label>
 <button class="btn">Sign In</button></form>
-<p style="font-size:12px;color:var(--muted)">Protected by role-based access &amp; audit trail</p>
+<p style="font-size:12px;color:var(--muted)">Protected by role-based access &amp; audit trail · v4</p>
 </div></section>
 
 <!-- APP -->
@@ -158,8 +158,8 @@ async function addLead(e){e.preventDefault();const f=e.target,d={};
 async function signIn(e){e.preventDefault();if(initError){toast("Setup problem: "+initError);return false}const em=$("em").value,pw=e.target.querySelector("input[type=password]").value;
  try{try{await account.deleteSession("current")}catch(_){}await account.createEmailPasswordSession(em,pw);enter(await account.get())}
  catch(err){toast("Login failed: "+err.message)}return false}
-function enter(u){$("login").classList.add("hide");$("app").classList.remove("hide");$("who").textContent=u.name||u.email;show("Dashboard")}
+function enter(u){$("login").classList.add("hide");$("app").classList.remove("hide");$("who").textContent=u.name||u.email;try{show("Dashboard")}catch(e){toast("Display error: "+e.message)}}
 async function signOut(){try{await account.deleteSession("current")}catch(e){}$("app").classList.add("hide");$("login").classList.remove("hide")}
-async function boot(){if(initError){toast("Setup problem: "+initError);return}try{enter(await account.get())}catch(e){}}
+async function boot(){if(initError){toast("Setup problem: "+initError);return}try{enter(await account.get())}catch(e){if(e.code!==401)toast("Session check: "+e.message)}}
 nav();boot();
 </script></body></html>
