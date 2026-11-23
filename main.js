@@ -1,6 +1,16 @@
 import { Client, Account, TablesDB, ID, Query, Permission, Role } from "appwrite";
 import "./style.css";
+// Visible red error banner (stays on screen) so problems are never silent.
+function showErr(m) {
+  let b = document.getElementById("err");
+  if (!b) { b = document.createElement("div"); b.id = "err"; b.style.cssText = "position:fixed;top:0;left:0;right:0;background:#b42318;color:#fff;padding:.7rem 1rem;z-index:99;font-size:.9rem"; document.body.appendChild(b); }
+  b.textContent = m;
+}
+window.addEventListener("error", e => showErr(e.message));
+window.addEventListener("unhandledrejection", e => showErr(e.reason?.message || String(e.reason)));
 const env = import.meta.env, DB = env.VITE_APPWRITE_DATABASE_ID;
+const missing = ["VITE_APPWRITE_ENDPOINT", "VITE_APPWRITE_PROJECT", "VITE_APPWRITE_DATABASE_ID"].filter(k => !env[k]);
+if (missing.length) { showErr("Missing variables: " + missing.join(", ") + ". Add them in the Site settings, then Redeploy."); throw new Error("missing env"); }
 const client = new Client().setEndpoint(env.VITE_APPWRITE_ENDPOINT).setProject(env.VITE_APPWRITE_PROJECT);
 const account = new Account(client), db = new TablesDB(client);
 const CATS = ["Insurance","NGOs","Entertainment","Tours","Embassies","Mining","Banks","Individual","Hotels","Flight","Government","Corporate"];
@@ -13,7 +23,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 function toast(m) { const t = $("#toast"); t.textContent = m; t.style.display = "block"; setTimeout(() => t.style.display = "none", 2500); }
 // DIRECT = true: no login page, the portal opens straight away. Set to false to bring the login page back.
 const DIRECT = true;
-const fail = e => toast(e?.message || "Something went wrong");
+const fail = e => { const m = e?.message || "Something went wrong"; toast(m); showErr(m); };
 
 async function load() {
   await Promise.all(TABLES.map(async t => {
